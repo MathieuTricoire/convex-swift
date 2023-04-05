@@ -1,11 +1,26 @@
 import Foundation
+import RegexBuilder
 
 let maxIdentifierLen = 64
-let allUnderscoresRegex = /^_+$/
-// swiftlint:disable opening_brace
-// false positive from swiftlint
-let identifierRegex = /^[a-zA-Z_][a-zA-Z0-9_]{0,63}$/
-// swiftlint:enable opening_brace
+
+// Use this when regex literal will not require an unsafe flag...
+// let allUnderscoresRegex = /^_+$/
+// let identifierRegex = /^[a-zA-Z_][\w]{0,63}$/
+let allUnderscoresRegex = Regex {
+    OneOrMore {
+        "_"
+    }
+}
+let identifierRegex = Regex {
+    CharacterClass(
+        .anyOf("_"),
+        ("a"..."z"),
+        ("A"..."Z")
+    )
+    Repeat(0...63) {
+        One(.word)
+    }
+}
 
 func validateObjectField(_ fieldName: String) throws {
     if fieldName.count == 0 {
@@ -25,7 +40,7 @@ func validateObjectField(_ fieldName: String) throws {
     }
 }
 
-enum FieldNameError: Error {
+enum FieldNameError: Error, Equatable {
     case empty, tooLong(String), reservedDollarPrefix(String), allUnderscores(String), invalidCharacters(String)
 }
 

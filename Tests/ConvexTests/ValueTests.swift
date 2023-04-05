@@ -18,7 +18,7 @@ final class ValueTests: XCTestCase {
         "social": .map([
             "github": "https://github.com/MathieuTricoire",
         ]),
-        "numbers": .map([
+        "numb3rs": .map([
             .int(99): ["Brooklyn", 99],
         ]),
         "languages": .set(["Swift"]),
@@ -35,15 +35,15 @@ final class ValueTests: XCTestCase {
         XCTAssertEqual(object.metadata?.coordinates?[1], .float(-73.9835428))
         XCTAssertEqual(object.social, .map(["github": "https://github.com/MathieuTricoire"]))
         XCTAssertEqual(object.social?.github, "https://github.com/MathieuTricoire")
-        XCTAssertEqual(object.numbers?[99], ["Brooklyn", 99])
+        XCTAssertEqual(object.numb3rs?[99], ["Brooklyn", 99])
         XCTAssertEqual(object.languages, .set(["Swift"]))
         XCTAssertEqual(object.image, .bytes(Data(base64Encoded: base64Image)!))
 
         XCTAssertEqual(object.metadata?.coordinates?[2], nil)
         XCTAssertEqual(object.invalid, nil)
         XCTAssertEqual(object.social?.twitter, nil)
-        XCTAssertEqual(object.numbers?.99, nil) // `99` is a string here, not necessary to support that with a fallback IMHO.
-        XCTAssertEqual(object.numbers?.98, nil)
+        XCTAssertEqual(object.numb3rs?.99, nil) // `99` is a string here, not necessary to support that with a fallback IMHO.
+        XCTAssertEqual(object.numb3rs?.98, nil)
     }
 
     func testSubscript() {
@@ -55,14 +55,14 @@ final class ValueTests: XCTestCase {
         XCTAssertEqual(object["metadata"]?["coordinates"]?[0], 40.7537509)
         XCTAssertEqual(object["metadata"]?["coordinates"]?[1], .float(-73.9835428))
         XCTAssertEqual(object["social"]?["github"], "https://github.com/MathieuTricoire")
-        XCTAssertEqual(object["numbers"]?[99], ["Brooklyn", 99])
+        XCTAssertEqual(object["numb3rs"]?[99], ["Brooklyn", 99])
         XCTAssertEqual(object["languages"], .set(["Swift"]))
         XCTAssertEqual(object["image"], .bytes(Data(base64Encoded: base64Image)!))
 
         XCTAssertEqual(object["invalid"], nil)
         XCTAssertEqual(object["metadata"]?["coordinates"]?[2], nil)
         XCTAssertEqual(object["social"]?["twitter"], nil)
-        XCTAssertEqual(object["numbers"]?[98], nil)
+        XCTAssertEqual(object["numb3rs"]?[98], nil)
     }
 
     func testObject() throws {
@@ -83,7 +83,7 @@ final class ValueTests: XCTestCase {
                     ["github", "https://github.com/MathieuTricoire"]
                 ]
             },
-            "numbers": {
+            "numb3rs": {
                 "$map": [
                     [99, ["Brooklyn", 99]]
                 ]
