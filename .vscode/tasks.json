@@ -1,0 +1,19 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "swift",
+			"args": [
+				"build",
+				"--build-tests"
+			],
+			"cwd": "/Users/mtr/work/github/MathieuTricoire/convex-swift",
+			"problemMatcher": [
+				"$swiftc"
+			],
+			"group": "build",
+			"label": "swift: Build All",
+			"detail": "swift build --build-tests"
+		}
+	]
+}

@@ -1,0 +1,15 @@
+disabled_rules:
+  - trailing_comma
+
+cyclomatic_complexity:
+  warning: 18
+
+identifier_name:
+  excluded: ["id", "_id", "_creationTime"]
+
+line_length:
+  warning: 180
+  ignores_function_declarations: true
+  ignores_comments: true
+  ignores_interpolated_strings: true
+  ignores_urls: true
