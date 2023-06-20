@@ -1,9 +1,9 @@
 import Foundation
 import XCTest
 
-func performEncode(_ value: some Encodable, expectedJSON: String? = nil, file: StaticString = #file, line: UInt = #line) throws -> Data {
+public func performEncode(_ value: some Encodable, expectedJSON: String? = nil, file: StaticString = #file, line: UInt = #line) throws -> Data {
     let encoder = JSONEncoder()
-    encoder.outputFormatting = .withoutEscapingSlashes
+    encoder.outputFormatting = .init(arrayLiteral: [.sortedKeys, .withoutEscapingSlashes])
     let encoded = try encoder.encode(value)
     if let expectedJSON {
         XCTAssertEqual(expectedJSON.prettyPrintedJSONString, encoded.prettyPrintedJSONString, file: file, line: line)
@@ -11,12 +11,12 @@ func performEncode(_ value: some Encodable, expectedJSON: String? = nil, file: S
     return encoded
 }
 
-func performDecode<T: Decodable>(_ value: Data, type _: T.Type, file _: StaticString = #file, line _: UInt = #line) throws -> T {
+public func performDecode<T: Decodable>(_ value: Data, type _: T.Type, file _: StaticString = #file, line _: UInt = #line) throws -> T {
     let decoder = JSONDecoder()
     return try decoder.decode(T.self, from: value)
 }
 
-func expectRoundTripEquality<T: Codable>(_ value: T, expectedJSON: String? = nil, file: StaticString = #file, line: UInt = #line) where T: Equatable {
+public func expectRoundTripEquality<T: Codable>(_ value: T, expectedJSON: String? = nil, file: StaticString = #file, line: UInt = #line) where T: Equatable {
     let encoded: Data
     do {
         encoded = try performEncode(value, expectedJSON: expectedJSON, file: file, line: line)

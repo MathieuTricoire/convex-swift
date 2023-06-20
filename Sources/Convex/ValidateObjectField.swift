@@ -11,13 +11,14 @@ let allUnderscoresRegex = Regex {
         "_"
     }
 }
+
 let identifierRegex = Regex {
     CharacterClass(
         .anyOf("_"),
-        ("a"..."z"),
-        ("A"..."Z")
+        "a" ... "z",
+        "A" ... "Z"
     )
-    Repeat(0...63) {
+    Repeat(0 ... 63) {
         One(.word)
     }
 }
@@ -40,12 +41,14 @@ func validateObjectField(_ fieldName: String) throws {
     }
 }
 
-enum FieldNameError: Error, Equatable {
-    case empty, tooLong(String), reservedDollarPrefix(String), allUnderscores(String), invalidCharacters(String)
-}
+enum FieldNameError: Error, LocalizedError, Equatable {
+    case empty
+    case tooLong(String)
+    case reservedDollarPrefix(String)
+    case allUnderscores(String)
+    case invalidCharacters(String)
 
-extension FieldNameError: CustomStringConvertible {
-    public var description: String {
+    public var errorDescription: String? {
         switch self {
         case .empty:
             return "Empty field names are disallowed."
@@ -57,23 +60,6 @@ extension FieldNameError: CustomStringConvertible {
             return "Field name \"\(fieldName)\" can't exclusively be underscores."
         case let .invalidCharacters(fieldName):
             return "Field name \"\(fieldName)\" must only contain alphanumeric characters or underscores and can't start with a number."
-        }
-    }
-}
-
-extension FieldNameError: LocalizedError {
-    public var errorDescription: String? {
-        switch self {
-        case .empty:
-            return NSLocalizedString(description, comment: "Empty field")
-        case .tooLong:
-            return NSLocalizedString(description, comment: "Too long")
-        case .reservedDollarPrefix:
-            return NSLocalizedString(description, comment: "Reserverd `$` prefix")
-        case .allUnderscores:
-            return NSLocalizedString(description, comment: "All underscores")
-        case .invalidCharacters:
-            return NSLocalizedString(description, comment: "Invalid characters")
         }
     }
 }

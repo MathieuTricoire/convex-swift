@@ -1,4 +1,5 @@
 @testable import Convex
+import TestHelpers
 import XCTest
 
 final class IdTests: XCTestCase {
@@ -24,7 +25,7 @@ final class IdTests: XCTestCase {
         XCTAssertEqual(id, expectedId)
     }
 
-    func testThrowErrorIfInvalidFormat() throws {
+    func testThrowErrorIfInvalidFormat() {
         let json = """
         {
             "$id": "messages-r0EqEuw9iXdjESHeXvlL9w",

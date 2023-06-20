@@ -1,4 +1,4 @@
-public struct ConvexId: Hashable, Equatable {
+public struct ConvexId: Hashable, Equatable, Sendable {
     var tableName: String
     var id: String
 
@@ -32,6 +32,18 @@ extension ConvexId: Codable {
             throw ImmediateDecodingError(
                 DecodingError.dataCorruptedError(forKey: .id, in: container, debugDescription: "Invalid $id format")
             )
+        }
+        tableName = components[0]
+        id = components[1]
+    }
+}
+
+extension ConvexId: ExpressibleByStringLiteral {
+    public init(stringLiteral value: StringLiteralType) {
+        let components = value.components(separatedBy: "|")
+
+        guard components.count == 2 else {
+            fatalError("Invalid $id format, expected: `table|id`.")
         }
         tableName = components[0]
         id = components[1]

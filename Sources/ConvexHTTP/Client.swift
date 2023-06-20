@@ -1,19 +1,12 @@
+import Convex
 import Foundation
-import os
+import Logging
 
+// TODO: How to centralize that?
 let packageVersion = "0.0.1"
 
 // Special custom 5xx HTTP status code to mean that the UDF returned an error.
 let statusCodeUdfFailed = 560
-
-/// Client for communicating with Convex.
-public struct Convex {
-    public let address: URL
-    private var auth: String?
-    private var debug: Bool
-    private let encoder: JSONEncoder
-    private let decoder: JSONDecoder
-}
 
 struct QueryBody: Encodable {
     let path: String
@@ -80,18 +73,23 @@ enum ConvexError: Error {
     case developerError(String)
 }
 
-public extension Convex {
-    private static let logger = Logger(
-        subsystem: Bundle.main.bundleIdentifier!,
-        category: String(describing: "Convex client")
-    )
+/// Client for communicating with Convex.
+public struct ConvexHTTPClient {
+    public let address: URL
+    private var auth: String?
+    private var debug: Bool
+    private let encoder: JSONEncoder
+    private let decoder: JSONDecoder
 
-    init(_ address: URL) {
+    // Better way for logging, QUID name?
+    private static let logger = Logger(label: "re.tricoi.mathieu.swift-convex.http")
+
+    public init(_ address: URL) {
         self.address = address
         debug = true
         decoder = JSONDecoder()
         encoder = JSONEncoder()
-        encoder.outputFormatting = .withoutEscapingSlashes
+        encoder.outputFormatting = .init(arrayLiteral: [.sortedKeys, .withoutEscapingSlashes])
     }
 
     /// Set the authentication token to be used for subsequent queries and mutations.
@@ -100,12 +98,12 @@ public extension Convex {
     ///
     /// - Parameters:
     ///   - token: JWT-encoded OpenID Connect identity token.
-    mutating func setAuth(_ token: String) {
+    public mutating func setAuth(_ token: String) {
         auth = token
     }
 
     /// Clear the current authentication token if set.
-    mutating func clearAuth() {
+    public mutating func clearAuth() {
         auth = nil
     }
 
@@ -121,8 +119,12 @@ public extension Convex {
     ///   - ``ConvexError``
     ///   - ``DecodingError.dataCorrupted`` if values requested from the payload are corrupted, or if the given data is not valid JSON.
     ///   - An error if any value throws an error during decoding.
-    func query<T: Decodable>(_ name: String, _ args: any Encodable...) async throws -> T {
+    public func query<T: Decodable>(_ name: String, _ args: any Encodable...) async throws -> T {
         try await _request(.query, name, args)
+    }
+
+    func query2<T: Decodable>(type _: T.Type, _ name: String, _ args: any Encodable...) async throws -> T {
+        try await _request2(type: T.self, .query, name, args)
     }
 
     /// Run a query on Convex and return the generic ``ConvexValue``
@@ -137,7 +139,7 @@ public extension Convex {
     ///   - ``ConvexError```
     ///   - ``DecodingError.dataCorrupted`` if values requested from the payload are corrupted, or if the given data is not valid JSON.
     ///   - An error if any value throws an error during decoding.
-    func query(_ name: String, _ args: any Encodable...) async throws -> ConvexValue {
+    public func query(_ name: String, _ args: any Encodable...) async throws -> ConvexValue {
         try await _request(.query, name, args)
     }
 
@@ -153,7 +155,7 @@ public extension Convex {
     ///   - ``ConvexError``
     ///   - ``DecodingError.dataCorrupted`` if values requested from the payload are corrupted, or if the given data is not valid JSON.
     ///   - An error if any value throws an error during decoding.
-    func mutation<T: Decodable>(_ name: String, _ args: any Encodable...) async throws -> T {
+    public func mutation<T: Decodable>(_ name: String, _ args: any Encodable...) async throws -> T {
         try await _request(.mutation, name, args)
     }
 
@@ -170,7 +172,7 @@ public extension Convex {
     ///   - ``DecodingError.dataCorrupted`` if values requested from the payload are corrupted, or if the given data is not valid JSON.
     ///   - An error if any value throws an error during decoding.
     @discardableResult
-    func mutation(_ name: String, _ args: any Encodable...) async throws -> ConvexValue {
+    public func mutation(_ name: String, _ args: any Encodable...) async throws -> ConvexValue {
         try await _request(.mutation, name, args)
     }
 
@@ -186,7 +188,7 @@ public extension Convex {
     ///   - ``ConvexError``
     ///   - ``DecodingError.dataCorrupted`` if values requested from the payload are corrupted, or if the given data is not valid JSON.
     ///   - An error if any value throws an error during decoding.
-    func action<T: Decodable>(_ name: String, _ args: any Encodable...) async throws -> T {
+    public func action<T: Decodable>(_ name: String, _ args: any Encodable...) async throws -> T {
         try await _request(.action, name, args)
     }
 
@@ -203,11 +205,44 @@ public extension Convex {
     ///   - ``DecodingError.dataCorrupted`` if values requested from the payload are corrupted, or if the given data is not valid JSON.
     ///   - An error if any value throws an error during decoding.
     @discardableResult
-    func action(_ name: String, _ args: any Encodable...) async throws -> ConvexValue {
+    public func action(_ name: String, _ args: any Encodable...) async throws -> ConvexValue {
         try await _request(.action, name, args)
     }
 
     private func _request<T: Decodable>(_ udfType: UDFType, _ name: String, _ args: [any Encodable]) async throws -> T {
+        let url = URL(string: "api/\(udfType.path)", relativeTo: address)!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("swift-convex-\(packageVersion)", forHTTPHeaderField: "Convex-Client")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let auth {
+            request.setValue("Bearer \(auth)", forHTTPHeaderField: "Authorization")
+        }
+
+        let queryBody = QueryBody(path: name, args: args, debug: debug)
+        request.httpBody = try encoder.encode(queryBody)
+
+        let (data, httpResponse) = try await URLSession.shared.httpData(for: request)
+        if !httpResponse.success, httpResponse.statusCode != statusCodeUdfFailed {
+            throw ConvexError.udfFailed(String(decoding: data, as: UTF8.self))
+        }
+        let response = try decoder.decode(ConvexResponse<T>.self, from: data)
+
+        if debug {
+            for line in response.logLines {
+                log(udfType: .query, path: name, message: line)
+            }
+        }
+
+        switch response.status {
+        case .success:
+            return response.value
+        case .error:
+            throw ConvexError.developerError(response.errorMessage ?? "~Unknown error, check Convex logs~")
+        }
+    }
+
+    private func _request2<T: Decodable>(type _: T.Type, _ udfType: UDFType, _ name: String, _ args: [any Encodable]) async throws -> T {
         let url = URL(string: "api/\(udfType.path)", relativeTo: address)!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

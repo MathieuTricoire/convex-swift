@@ -1,7 +1,8 @@
 import Foundation
 
+// TODO: Make it sendable...
 @dynamicMemberLookup
-public enum ConvexValue: Equatable, Hashable {
+public enum ConvexValue: Equatable, Hashable, Sendable {
     case id(ConvexId)
     case null
     case int(Int64)
@@ -326,7 +327,7 @@ extension ConvexValue: ExpressibleByBooleanLiteral {
 }
 
 extension ConvexValue: ExpressibleByStringLiteral {
-    public init(stringLiteral value: String) {
+    public init(stringLiteral value: StringLiteralType) {
         self = .string(value)
     }
 }

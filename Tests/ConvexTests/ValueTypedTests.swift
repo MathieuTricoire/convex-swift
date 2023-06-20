@@ -1,4 +1,5 @@
 @testable import Convex
+import TestHelpers
 import XCTest
 
 struct Message: Codable, Equatable {
