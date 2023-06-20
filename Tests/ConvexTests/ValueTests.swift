@@ -1,4 +1,5 @@
 @testable import Convex
+import TestHelpers
 import XCTest
 
 // swiftlint:disable line_length
@@ -6,14 +7,14 @@ private let base64Image = "/9j/4AAQSkZJRgABAQAASABIAAD/4QCARXhpZgAATU0AKgAAAAgAB
 // swiftlint:enable line_length
 
 final class ValueTests: XCTestCase {
-    let object: ConvexValue = [
-        "_id": .id(ConvexId(tableName: "messages", id: "r0EqEuw9iXdjESHeXvlL9w")),
+    let object: Value = [
+        "_id": .id(id: "messages:r0EqEuw9iXdjESHeXvlL9w"),
         "author": "Mathieu",
         "body": "Hi Convex!",
         "published": true,
         "updatedAt": .null,
         "metadata": [
-            "coordinates": [40.7537509, .float(-73.9835428)],
+            "coordinates": [40.7537509, .float(value: -73.9835428)],
         ],
         "social": .map([
             "github": "https://github.com/MathieuTricoire",
@@ -26,7 +27,7 @@ final class ValueTests: XCTestCase {
     ]
 
     func testDynamicMember() {
-        XCTAssertEqual(object._id, .id(ConvexId(tableName: "messages", id: "r0EqEuw9iXdjESHeXvlL9w")))
+        XCTAssertEqual(object._id, .id(id: "messages:r0EqEuw9iXdjESHeXvlL9w"))
         XCTAssertEqual(object.author, "Mathieu")
         XCTAssertEqual(object.body, .string("Hi Convex!"))
         XCTAssertEqual(object.published, true)
@@ -47,7 +48,7 @@ final class ValueTests: XCTestCase {
     }
 
     func testSubscript() {
-        XCTAssertEqual(object["_id"], .id(ConvexId(tableName: "messages", id: "r0EqEuw9iXdjESHeXvlL9w")))
+        XCTAssertEqual(object["_id"], .id("messages:r0EqEuw9iXdjESHeXvlL9w"))
         XCTAssertEqual(object["author"], "Mathieu")
         XCTAssertEqual(object["body"], .string("Hi Convex!"))
         XCTAssertEqual(object["published"], true)
@@ -63,97 +64,5 @@ final class ValueTests: XCTestCase {
         XCTAssertEqual(object["metadata"]?["coordinates"]?[2], nil)
         XCTAssertEqual(object["social"]?["twitter"], nil)
         XCTAssertEqual(object["numb3rs"]?[98], nil)
-    }
-
-    func testObject() throws {
-        let expectedJSON = """
-        {
-            "_id": {
-                "$id": "messages|r0EqEuw9iXdjESHeXvlL9w"
-            },
-            "author": "Mathieu",
-            "body": "Hi Convex!",
-            "published": true,
-            "updatedAt": null,
-            "metadata": {
-                "coordinates": [40.7537509, -73.9835428]
-            },
-            "social": {
-                "$map": [
-                    ["github", "https://github.com/MathieuTricoire"]
-                ]
-            },
-            "numb3rs": {
-                "$map": [
-                    [99, ["Brooklyn", 99]]
-                ]
-            },
-            "languages": {
-                "$set": ["Swift"]
-            },
-            "image": {
-                "$bytes": "\(base64Image)"
-            }
-        }
-        """
-        expectRoundTripEquality(object, expectedJSON: expectedJSON)
-    }
-
-    func testMultipleMapValues() throws {
-        let value: ConvexValue = .map([
-            "github": "https://github.com/MathieuTricoire",
-            "twitter": "https://twitter.com/tricky21",
-        ])
-        expectRoundTripEquality(value)
-    }
-
-    func testComplicatedMap() throws {
-        let value: ConvexValue = .map([
-            .object(["unrelated": "stuff"]): .array(["yep it makes no sense", "it's just a test"]),
-            "unrelated string": true,
-            .map(["unrelated": "map"]): .set(["for an", "unrelated set"]),
-        ])
-        expectRoundTripEquality(value)
-    }
-
-    func testMultipleSetValues() throws {
-        let value: ConvexValue = .set([
-            "Swift", "Rust", "TypeScript",
-        ])
-        expectRoundTripEquality(value)
-    }
-
-    func testComplicatedSet() throws {
-        let value: ConvexValue = .set([
-            .object(["name": "Swift"]),
-            .object(["name": "Rust"]),
-            .object(["name": "TypeScript"]),
-            "unrelated string",
-            true,
-            .map(["one": 1, "two": 2]),
-        ])
-        expectRoundTripEquality(value)
-    }
-
-    // I don't throw an error if a field name is invalid coming from Convex,
-    // it should not happen and could be frustrating to not "understand"
-    // why it not works (even if error message should indicates that clearly)
-    // but I would like opinions on that, and change the behaviour if necessary
-    // But we will of course throw an error if we try to encode an invalid field name.
-    func testInvalidFieldName() throws {
-        // Decode: OK
-        let receivedJSON = #"{ "invalid but accepted": true }"#.data(using: .utf8)!
-        _ = try performDecode(receivedJSON, type: ConvexValue.self)
-
-        // Encode: ERROR
-        let convexToSend: ConvexValue = [
-            "invalid and rejected": true,
-        ]
-        XCTAssertThrowsError(try performEncode(convexToSend)) { error in
-            XCTAssertEqual(
-                error.localizedDescription,
-                #"Field name "invalid and rejected" must only contain alphanumeric characters or underscores and can't start with a number."#
-            )
-        }
     }
 }
